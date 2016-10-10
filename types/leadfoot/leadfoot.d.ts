@@ -40,7 +40,7 @@ declare module leadfoot {
 		/**
 		 * The response object for the request.
 		 */
-//		response: request.IResponse;
+		// response: request.IResponse;
 		response: any;
 
 		/**
@@ -166,6 +166,12 @@ declare module leadfoot {
 		 * around.
 		 */
 		brokenExecuteElementReturn?: boolean;
+
+		/**
+		 * Environments with this capability don't support script injection when the current browser URL is not an http/https
+		 * URL. This issue cannot be worked around.
+		 */
+		brokenExecuteForNonHttpUrl?: boolean;
 
 		/**
 		 * Environments with this capability claim fully transparent elements are non-hidden. This issue is automatically

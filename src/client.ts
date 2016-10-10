@@ -1,6 +1,9 @@
-/* jshint node:true */
+import { IDefine } from 'dojo/loader'
+
+declare const define: IDefine;
+
 if (typeof process !== 'undefined' && typeof define === 'undefined') {
-	(function () {
+	(function (this: any) {
 		require('dojo/loader')((this.__internConfig = {
 			baseUrl: process.cwd().replace(/\\/g, '/'),
 			packages: [
@@ -16,21 +19,25 @@ if (typeof process !== 'undefined' && typeof define === 'undefined') {
 					'intern/dojo': 'intern/browser_modules/dojo'
 				}
 			}
-		}), [ 'intern/runner' ]);
+		}), [ 'intern/client' ]);
 	})();
 }
 else {
 	define([
 		'./lib/executors/PreExecutor',
-		'./lib/exitHandler'
+		'dojo/has!host-node?./lib/exitHandler'
 	], function (PreExecutor, exitHandler) {
 		var executor = new PreExecutor({
-			defaultLoaderOptions: (function () {
+			defaultLoaderOptions: (function (this: any) {
 				return this;
 			})().__internConfig,
-			executorId: 'runner'
+			executorId: 'client'
 		});
 
-		exitHandler(process, executor.run(), 10000);
+		var promise = executor.run();
+
+		if (exitHandler) {
+			exitHandler(process, promise, 10000);
+		}
 	});
 }

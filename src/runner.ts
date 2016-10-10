@@ -1,4 +1,3 @@
-/* jshint node:true, es3:false */
 if (typeof process !== 'undefined' && typeof define === 'undefined') {
 	(function () {
 		require('dojo/loader')((this.__internConfig = {
@@ -16,25 +15,21 @@ if (typeof process !== 'undefined' && typeof define === 'undefined') {
 					'intern/dojo': 'intern/browser_modules/dojo'
 				}
 			}
-		}), [ 'intern/client' ]);
+		}), [ 'intern/runner' ]);
 	})();
 }
 else {
 	define([
 		'./lib/executors/PreExecutor',
-		'dojo/has!host-node?./lib/exitHandler'
+		'./lib/exitHandler'
 	], function (PreExecutor, exitHandler) {
 		var executor = new PreExecutor({
 			defaultLoaderOptions: (function () {
 				return this;
 			})().__internConfig,
-			executorId: 'client'
+			executorId: 'runner'
 		});
 
-		var promise = executor.run();
-
-		if (exitHandler) {
-			exitHandler(process, promise, 10000);
-		}
+		exitHandler(process, executor.run(), 10000);
 	});
 }
