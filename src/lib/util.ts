@@ -23,7 +23,7 @@ has.add('function-name', function () {
 });
 
 let instrumentationSourceMap: { [path: string]: SourceMapConsumer } = {};
-let fileSourceMaps = {};
+let fileSourceMaps: { [path: string]: SourceMapConsumer } = {};
 let fileSources: { [path: string]: string } = {};
 let instrumenters: { [name: string]: Instrumenter } = {};
 
@@ -416,7 +416,7 @@ export function serialize(object: Object): string {
 		output += value.toISOString();
 	}
 
-	function writeObject(object: Object) {
+	function writeObject(object: any) {
 		// jshint maxcomplexity:12
 
 		if (stack.indexOf(object) > -1) {
@@ -444,16 +444,19 @@ export function serialize(object: Object): string {
 			indent += '  ';
 
 			keys.sort(function (a, b) {
+				const na = Number(a);
+				const nb = Number(b);
+
 				// Sort numeric keys to the top, in numeric order, to display arrays in their natural sort order
-				if (!isNaN(a) && !isNaN(b)) {
-					return a - b;
+				if (!isNaN(na) && !isNaN(nb)) {
+					return na - nb;
 				}
 
-				if (!isNaN(a) && isNaN(b)) {
+				if (!isNaN(na) && isNaN(nb)) {
 					return -1;
 				}
 
-				if (isNaN(a) && !isNaN(b)) {
+				if (isNaN(na) && !isNaN(nb)) {
 					return 1;
 				}
 
@@ -468,7 +471,7 @@ export function serialize(object: Object): string {
 				return 0;
 			}).forEach(function (key, index) {
 				output += (index > 0 ? ',' : '') + '\n' + indent;
-				isArray && !isNaN(key) ? writePrimitive(key) : writeString(key);
+				isArray && !isNaN(Number(key)) ? writePrimitive(key) : writeString(key);
 				output += ': ';
 				write(object[key]);
 			});
@@ -632,7 +635,7 @@ function getModules(moduleIds: string[], loader: IRequire) {
  * Assumes mappings are is in order by generatedLine, then by generatedColumn; maps created with
  * SourceMapConsumer.eachMapping should be in this order by default.
  */
-function getOriginalPosition(map: any, line: number, column: number) {
+function getOriginalPosition(map: any, line: number, column: number): { line: number, column: number, source?: string } {
 	var originalPosition = map.originalPositionFor({ line: line, column: column});
 
 	// if the SourceMapConsumer was able to find a location, return it
@@ -643,7 +646,7 @@ function getOriginalPosition(map: any, line: number, column: number) {
 	var entries: MappingItem[] = [];
 
 	// find all map entries that apply to the given line in the generated output
-	map.eachMapping(function (entry: SourceMapConsumer) {
+	map.eachMapping(function (entry: MappingItem) {
 		if (entry.generatedLine === line) {
 			entries.push(entry);
 		}
@@ -665,8 +668,8 @@ function getOriginalPosition(map: any, line: number, column: number) {
 
 	if (column !== null) {
 		// find the most likely mapping for the given generated line and column
-		var entry;
-		for (var i = 1; i < entries.length; i++) {
+		let entry: MappingItem;
+		for (let i = 1; i < entries.length; i++) {
 			entry = entries[i];
 			if (column > originalPosition.generatedColumn && column >= entry.generatedColumn) {
 				originalPosition = entry;
@@ -684,15 +687,15 @@ function getOriginalPosition(map: any, line: number, column: number) {
 /**
  * Dereference the source from a traceline.
  */
-function getSource(tracepath) {
+function getSource(tracepath: string) {
 	/* jshint maxcomplexity:13 */
-	var match;
-	var source;
-	var line;
-	var col;
-	var map;
-	var originalPos;
-	var result;
+	let match: RegExpMatchArray;
+	let source: string;
+	let line: number;
+	let col: number;
+	let map: SourceMapConsumer;
+	let originalPos: { source?: string, line: number, column: number };
+	let result: string;
 
 	if (tracepath === '<anonymous>') {
 		return 'anonymous';
@@ -752,12 +755,12 @@ function getSource(tracepath) {
 /**
  * Load and process the source map for a given file.
  */
-function getSourceMap(filepath) {
-	var data;
-	var lines;
-	var lastLine;
-	var match;
-	var sourceMapRegEx = /(?:\/{2}[#@]{1,2}|\/\*)\s+sourceMappingURL\s*=\s*(data:(?:[^;]+;)+base64,)?(\S+)/;
+function getSourceMap(filepath: string) {
+	let data: string;
+	let lines: string[];
+	let lastLine: string;
+	let match: RegExpMatchArray;
+	const sourceMapRegEx = /(?:\/{2}[#@]{1,2}|\/\*)\s+sourceMappingURL\s*=\s*(data:(?:[^;]+;)+base64,)?(\S+)/;
 
 	if (filepath in fileSourceMaps) {
 		return fileSourceMaps[filepath];
@@ -783,8 +786,8 @@ function getSourceMap(filepath) {
 			else {
 				// treat map file path as relative to the source file
 				var mapFile = pathUtil.join(pathUtil.dirname(filepath), match[2]);
-				data = fs.readFileSync(mapFile);
-				fileSourceMaps[filepath] = loadSourceMap(data.toString('utf-8'));
+				data = fs.readFileSync(mapFile, { encoding: 'utf8' });
+				fileSourceMaps[filepath] = loadSourceMap(data);
 			}
 			return fileSourceMaps[filepath];
 		}
@@ -816,9 +819,9 @@ function normalizePathForInstrumentation(filename: string) {
 /**
  * Parse a stack trace, apply any source mappings, and normalize its format.
  */
-function normalizeStackTrace(stack, filterStack) {
-	var lines = stack.replace(/\s+$/, '').split('\n');
-	var firstLine = '';
+function normalizeStackTrace(stack: string, filterStack: boolean) {
+	let lines = stack.replace(/\s+$/, '').split('\n');
+	let firstLine = '';
 
 	if (/^(?:[A-Z]\w+)?Error: /.test(lines[0])) {
 		// ignore the first line if it's just the Error name
@@ -831,10 +834,10 @@ function normalizeStackTrace(stack, filterStack) {
 		lines = lines.slice(1);
 	}
 
-	stack = /^\s*at /.test(lines[0]) ? processChromeTrace(lines) : processSafariTrace(lines);
+	let stackLines = /^\s*at /.test(lines[0]) ? processChromeTrace(lines) : processSafariTrace(lines);
 
 	if (filterStack) {
-		stack = stack.filter(function (line) {
+		stackLines = stackLines.filter(function (line) {
 			return !(
 				/internal\/process\//.test(line) ||
 				/node_modules\//.test(line)
@@ -842,49 +845,41 @@ function normalizeStackTrace(stack, filterStack) {
 		});
 	}
 
-	return '\n' + firstLine + stack.join('\n');
+	return '\n' + firstLine + stackLines.join('\n');
 }
 
 /**
  * Process Chrome, Opera, and IE traces.
  */
-function processChromeTrace(lines) {
-	var stack = [];
-	var match;
-	var line;
-	for (var i = 0; i < lines.length; i++) {
-		line = lines[i];
+function processChromeTrace(lines: string[]) {
+	return lines.map(function (line) {
+		let match: RegExpMatchArray;
 		if ((match = /^\s*at (.+?) \(([^)]+)\)$/.exec(line))) {
-			stack.push(formatLine({ func: match[1], source: match[2] }));
+			return formatLine({ func: match[1], source: match[2] });
 		}
 		else if ((match = /^\s*at (.*)/.exec(line))) {
-			stack.push(formatLine({ source: match[1] }));
+			return formatLine({ source: match[1] });
 		}
 		else {
-			stack.push(line);
+			return line;
 		}
-	}
-	return stack;
+	});
 }
 
 /**
  * Process Safari and Firefox traces.
  */
-function processSafariTrace(lines) {
-	var stack = [];
-	var match;
-	var line;
-	for (var i = 0; i < lines.length; i++) {
-		line = lines[i];
+function processSafariTrace(lines: string[]) {
+	return lines.map(function (line) {
+		let match: RegExpMatchArray;
 		if ((match = /^([^@]+)@(.*)/.exec(line))) {
-			stack.push(formatLine({ func: match[1], source: match[2] }));
+			return formatLine({ func: match[1], source: match[2] });
 		}
 		else if ((match = /^(\w+:\/\/.*)/.exec(line))) {
-			stack.push(formatLine({ source: match[1] }));
+			return formatLine({ source: match[1] });
 		}
 		else {
-			stack.push(line);
+			return line;
 		}
-	}
-	return stack;
+	});
 }
