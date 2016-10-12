@@ -1,6 +1,10 @@
 import * as lang from 'dojo/lang';
 import { EnvironmentType } from './EnvironmentType';
 
+export type Environment = { version?: (string|string[]), [key: string]: any };
+export type FlatEnvironment = { version?: string, [key: string]: any };
+export type AvailableEnvironment = { version: string, [key: string]: any };
+
 /**
  * Resolves a collection of Intern test environments to a list of service environments
  *
@@ -9,31 +13,46 @@ import { EnvironmentType } from './EnvironmentType';
  * @param available a list of available environments
  * @returns a list of flattened service environments
  */
-export function resolveEnvironments(capabilities: Object, environments: Environment[], available?: Environment[]) {
-	environments = createPermutations(capabilities, environments);
+export function resolveEnvironments(capabilities: { [key: string]: any }, environments: Environment[], available?: AvailableEnvironment[]) {
+	// flatEnviroments will have non-array versions
+	const flatEnvironments = createPermutations(capabilities, environments);
 
 	// Expand any version ranges or aliases in the environments.
-	environments.forEach(function (environment) {
-		environment.version = resolveVersions(environment, available);
+	environments = flatEnvironments.map(function (environment) {
+		return lang.mixin({}, environment, {
+			version: resolveVersions(environment, available)
+		});
 	});
 
 	// Perform a second round of permuting to handle any expanded version ranges
 	return createPermutations({}, environments).map(function (environment) {
+		// After permuting, environment.version will be singular again
 		return new EnvironmentType(environment);
 	});
 }
 
 /**
- * A comparator for sorting numbers in ascending order
+ * A comparator for sorting potentially numeric strings in ascending order
  */
-function ascendingNumbers(a: number, b: number) {
-	return a - b;
+function ascendingNumbers(a: string, b: string) {
+	const na = Number(a);
+	const nb = Number(b);
+	if (!isNaN(na) && !isNaN(nb)) {
+		return na - nb;
+	}
+	if (a < b) {
+		return -1;
+	}
+	if (a > b) {
+		return 1;
+	}
+	return 0;
 }
 
 /**
  * Expands a range of versions using available environments
  */
-function expandVersionRange(left: number, right: number, availableVersions: number[]) {
+function expandVersionRange(left: string, right: string, availableVersions: string[]) {
 	if (availableVersions.indexOf(left) === -1 || availableVersions.indexOf(right) === -1) {
 		throw new Error('The version range ' + left + '..' + right + ' is unavailable');
 	}
@@ -47,7 +66,6 @@ function expandVersionRange(left: number, right: number, availableVersions: numb
  *
  * Assumes availableVersions is sorted in ascending order. Acceptable versions are:
  *
- *   - {number}
  *   - '{number}'
  *   - 'latest'
  *   - 'latest-{number}'
@@ -101,8 +119,6 @@ function splitVersions(versionSpec: string) {
 	});
 }
 
-type Environment = { version: string, [key: string]: any };
-
 /**
  * Get a list of versions from a list of available environments filtered by the current environment.
  *
@@ -110,7 +126,7 @@ type Environment = { version: string, [key: string]: any };
  * @param available a list of available environments
  * @returns a list of version numbers from available filtered by the current environment
  */
-function getVersions(environment: Environment, available: Environment[]) {
+function getVersions(environment: Environment, available: AvailableEnvironment[]): string[] {
 	let versions: { [key: string]: boolean } = {};
 
 	available.filter(function (availableEnvironment) {
@@ -120,11 +136,11 @@ function getVersions(environment: Environment, available: Environment[]) {
 		}).some(function (key) {
 			return (key in availableEnvironment) && availableEnvironment[key] !== environment[key];
 		});
-	}).forEach(function (environment) {
-		versions[environment.version] = true;
+	}).forEach(function (availableEnvironment) {
+		versions[availableEnvironment.version] = true;
 	});
 		
-	return Object.keys(versions).sort(ascending);
+	return Object.keys(versions).sort(ascendingNumbers);
 }
 
 /**
@@ -132,10 +148,10 @@ function getVersions(environment: Environment, available: Environment[]) {
  * using the environment list returned by tunnel#getEnvironments().
  *
  * @param environment an object with an optional version property
- * @param available a list of enviornment available on the target service
+ * @param available a list of environment available on the target service
  * @returns the environment with resolved version aliases
  */
-function resolveVersions(environment: Environment, available: Environment[]) {
+function resolveVersions(environment: FlatEnvironment, available: AvailableEnvironment[]): string[] {
 	let versionSpec = environment.version;
 	let versions: string[];
 	available = available || [];
@@ -167,7 +183,7 @@ function resolveVersions(environment: Environment, available: Environment[]) {
  * @param sources a list of sources to flatten
  * @return a flattened collection of sources
  */
-function createPermutations(base: Object, sources?: Environment[]): Object[] {
+function createPermutations(base: { [key: string]: string }, sources?: Environment[]): FlatEnvironment[] {
 	// If no expansion sources were given, the set of permutations consists of just the base
 	if (!sources || sources.length === 0) {
 		return [ lang.mixin({}, base) ];
