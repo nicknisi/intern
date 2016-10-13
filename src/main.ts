@@ -34,6 +34,6 @@ export function normalize(interfaceId: string) {
 /**
  * The planned execution mode. One of 'client', 'runner', or 'custom'.
  */
-export let mode: InternMode = null;
+export let mode: ExecutionMode = null;
 
-export type InternMode = 'client' | 'runner';
+export type ExecutionMode = 'client' | 'runner' | 'custom';

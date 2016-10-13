@@ -1,3 +1,5 @@
+import { Config } from '../interfaces';
+
 // AMD modules
 import * as has from 'dojo/has';
 import * as lang from 'dojo/lang';
@@ -8,11 +10,33 @@ import * as Promise from 'dojo/Promise';
 import * as fs from 'fs';
 import * as pathUtil from 'path';
 import * as istanbulDefaults from 'instanbul/lib/report/common/defaults';
+import { Watermarks } from 'istanbul';
 
 export interface ReporterConfig {
-	console?: any
-	watermarks?: 
+	console?: any;
+	watermarks?: Watermarks;
+	filename?: string;
+	output?: NodeJS.WritableStream;
 }
+
+export interface Reporter {
+	[eventName: string]: Listener;
+	destroy?: () => void;
+	$others?: Listener;
+}
+
+export interface ReporterDescriptor {
+	id: string;
+	filename?: string;
+	directory?: string;
+	internConfig?: Config;
+}
+
+export interface ReporterConstructor {
+	new (options?: any): Reporter;
+}
+
+export type Listener = (reporter: Reporter, ...args: any[]) => (void|Promise<any>);
 
 /**
  * A class that manages a set of reporters
@@ -43,12 +67,12 @@ export interface ReporterConfig {
 export class ReporterManager {
 	private _earlyEvents: any[] = [];
 
-	private _reporters: any[] = [];
+	private _reporters: Reporter[] = [];
 
 	/**
 	 * Add a reporter to the list of managed reporters.
 	 */
-	add(Reporter: (string|{ [key: string]: Function }), config: ReporterConfig) {
+	add(Reporter: (ReporterConstructor|Object), config: ReporterConfig) {
 		let reporter: any;
 
 		if (typeof Reporter === 'object') {
@@ -79,10 +103,10 @@ export class ReporterManager {
 				else {
 					// See theintern/intern#454; all \r must be replaced by \x1b[1G (cursor move to column 1)
 					// on Windows due to a libuv bug
-					var write;
+					let write: (data: string) => any;
 					if (process.platform === 'win32') {
 						write = function (data) {
-							var args;
+							let args: (any[]|IArguments);
 							if (typeof data === 'string' && data.indexOf('\r') !== -1) {
 								data = data.replace(/\r/g, '\x1b[1G');
 								args = [ data ].concat(Array.prototype.slice.call(arguments, 1));
@@ -111,11 +135,11 @@ export class ReporterManager {
 					var element = document.createElement('pre');
 
 					return {
-						write: function (chunk, encoding, callback) {
+						write: function (chunk: string, encoding: string, callback: Function) {
 							element.appendChild(document.createTextNode(chunk));
 							callback();
 						},
-						end: function (chunk, encoding, callback) {
+						end: function (chunk: string, encoding: string, callback: Function) {
 							element.appendChild(document.createTextNode(chunk));
 							document.body.appendChild(element);
 							callback();
@@ -140,7 +164,7 @@ export class ReporterManager {
 	}
 
 	empty() {
-		this._reporters.forEach(function (reporter) {
+		this._reporters.forEach(function (reporter: Reporter) {
 			reporter.destroy && reporter.destroy();
 		});
 		this._reporters = [];
@@ -152,19 +176,17 @@ export class ReporterManager {
 	 * @param name event name to emit
 	 * @returns {Promise.<void>}
 	 */
-	emit(name: string) {
+	emit(name: string, ...args: any[]): Promise<any> {
 		if (!this._reporters.length) {
 			this._earlyEvents.push(Array.prototype.slice.call(arguments, 0));
 			return Promise.resolve();
 		}
 
-		var self = this;
-		var allArgs = arguments;
-		var args = Array.prototype.slice.call(allArgs, 1);
+		const allArgs = arguments;
 
-		return Promise.all(this._reporters.map(function (reporter) {
-			var listener = reporter[name];
-			var sendArgs = args;
+		return Promise.all(this._reporters.map((reporter) => {
+			var listener: Listener = (<any> reporter)[name];
+			var sendArgs: (IArguments|any[]) = args;
 
 			if (!listener && reporter.$others) {
 				listener = reporter.$others;
@@ -182,8 +204,8 @@ export class ReporterManager {
 				try {
 					var result = listener.apply(reporter, sendArgs);
 					if (result && result.then && name !== 'reporterError') {
-						return result.then(null, function (error) {
-							return self.emit('reporterError', reporter, error);
+						return result.then(null, (error: Error) => {
+							return this.emit('reporterError', reporter, error);
 						});
 					}
 					else {
@@ -192,7 +214,7 @@ export class ReporterManager {
 				}
 				catch (error) {
 					if (name !== 'reporterError') {
-						return self.emit('reporterError', reporter, error);
+						return this.emit('reporterError', reporter, error);
 					}
 					else {
 						return Promise.reject(error);
@@ -202,15 +224,15 @@ export class ReporterManager {
 		})).then(noop, noop);
 	}
 
-	on(eventName: string, listener: Function) {
-		var reporter = {};
+	on(eventName: string, listener: Listener) {
+		let reporter: Reporter = {};
 		reporter[eventName] = listener;
 
 		var reporters = this._reporters;
 		reporters.push(reporter);
 
 		return {
-			remove: function () {
+			remove: function (this: any) {
 				this.remove = function () {};
 				lang.pullFromArray(reporters, reporter);
 				reporters = reporter = null;
@@ -223,42 +245,32 @@ export class ReporterManager {
 			return console;
 		}
 
-		var fakeConsole = {};
-
-		[
-			'assert',
-			'count',
-			'dir',
-			'error',
-			'exception',
-			'info',
-			'log',
-			'table',
-			'time',
-			'timeEnd',
-			'trace',
-			'warn'
-		].forEach(function (key) {
-			fakeConsole[key] = noop;
-		});
-
-		return fakeConsole;
+		return <Console> {
+			assert: noop,
+			count: noop,
+			dir: noop,
+			error: noop,
+			exception: noop,
+			info: noop,
+			log: noop,
+			table: noop,
+			time: noop,
+			timeEnd: noop,
+			trace: noop,
+			warn: noop
+		};
 	}
 
 	run() {
-		var self = this;
-
-		function emitEarlyEvents() {
-			var promise = Promise.all(self._earlyEvents.map(function (event) {
-				return self.emit.apply(self, event);
-			}));
-			self._earlyEvents.splice(0, Infinity);
-			return promise.then(noop, noop);
-		}
-
 		return this
 			.emit('run')
-			.then(emitEarlyEvents);
+			.then(() => {
+				const promise = Promise.all(this._earlyEvents.map((event) => {
+					return this.emit.apply(this, event);
+				}));
+				this._earlyEvents.splice(0, Infinity);
+				return promise.then(noop, noop);
+			});
 	}
 }
 
@@ -266,15 +278,11 @@ export class ReporterManager {
  * A Reporter that wraps a legacy Intern 2 reporter definition object.
  */
 class LegacyReporter {
-	constructor(reporterMap: { [key: string]: Function }) {
-		let callback: Function;
-		let eventName: string;
-
+	constructor(reporterMap: { [key: string]: any }) {
 		// add all of the properties on the reporterMap that look like topics or map to a known
 		// reporter method (e.g., start)
 		for (let topicId in reporterMap) {
-			callback = reporterMap[topicId];
-			eventName = null;
+			let eventName: string = null;
 
 			if (topicId in TOPIC_TO_EVENT) {
 				eventName = TOPIC_TO_EVENT[topicId];
@@ -293,13 +301,13 @@ class LegacyReporter {
 				return function () {
 					return callback.apply(reporterMap, arguments);
 				};
-			})(callback));
+			})(reporterMap[topicId]));
 		}
 	}
 }
 
 // topics that don't directly map to reporter events
-const TOPIC_TO_EVENT = {
+const TOPIC_TO_EVENT: { [key: string]: string } = {
 	'/test/new': 'newTest',
 	'/suite/new': 'newSuite',
 	'/client/end': 'runEnd',
@@ -311,10 +319,10 @@ const TOPIC_TO_EVENT = {
 	stop: 'destroy'
 };
 
-function defineLazyProperty(object, property, getter) {
+function defineLazyProperty(object: Object, property: string, getter: () => any) {
 	Object.defineProperty(object, property, {
-		get: function () {
-			var value = getter.apply(this, arguments);
+		get: function (this: any) {
+			const value = getter.apply(this, arguments);
 			Object.defineProperty(object, property, {
 				value: value,
 				configurable: true,
@@ -327,7 +335,7 @@ function defineLazyProperty(object, property, getter) {
 	});
 }
 
-function isDirectory(pathname) {
+function isDirectory(pathname: string) {
 	try {
 		return fs.statSync(pathname).isDirectory();
 	}
@@ -336,7 +344,7 @@ function isDirectory(pathname) {
 	}
 }
 
-function mkdir(dirname) {
+function mkdir(dirname: string) {
 	dirname.split(pathUtil.sep).reduce(function (currentPath, part) {
 		currentPath = pathUtil.join(currentPath, part);
 		if (!isDirectory(currentPath)) {

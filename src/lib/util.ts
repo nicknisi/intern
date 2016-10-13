@@ -114,11 +114,16 @@ export function createDeferred() {
 	return dfd;
 }
 
+export interface Queuer {
+	(callee: Function): () => void;
+	empty?: () => void;
+}
+
 /**
  * Creates a basic FIFO function queue to limit the number of currently executing asynchronous functions.
  *
  * @param maxConcurrency Number of functions to execute at once.
- * @returns {function(callee:Function)} A function that can be used to push new functions onto the queue.
+ * @returns A function that can be used to push new functions onto the queue.
  */
 export function createQueue(maxConcurrency: number) {
 	let numCalls = 0;
@@ -135,7 +140,7 @@ export function createQueue(maxConcurrency: number) {
 	}
 
 	// Returns a function to wrap callback function in this queue
-	let queuer = function (callee: Function) {
+	let queuer: Queuer = function (callee: Function) {
 		// Calling the wrapped function either executes immediately if possible,
 		// or pushes onto the queue if not
 		return function (this: any) {
@@ -229,7 +234,7 @@ export function getErrorMessage(error: Error): string {
 /**
  * Return the module for a given module ID
  */
-export function getModule(moduleId: string, loader: IRequire) {
+export function getModule(moduleId: string, loader?: IRequire) {
 	return getModules([ moduleId ], loader).then(function (modules: any[]) {
 		return modules[0];
 	});

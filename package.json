@@ -22,18 +22,17 @@
     "source-map": "0.1.33"
   },
   "devDependencies": {
-    "@types/node": "~6.0.0",
-    "@types/es6-promise": "~0.0.31",
+    "@types/chai": "~3.4.34",
     "@types/diff": "~0.0.31",
+    "@types/es6-promise": "~0.0.31",
     "@types/glob": "~5.0.30",
-    "@types/istanbul": "~0.4.29",
+    "@types/node": "~6.0.0",
     "@types/shelljs": "~0.3.32",
     "@types/source-map": "~0.1.28",
-    "@types/chai": "~3.4.34",
     "chokidar": "~1.6.0",
     "intern": "~3.2.0",
-	"shelljs": "~0.7.0",
-	"typescript": "~2.0.0"
+    "shelljs": "~0.7.0",
+    "typescript": "~2.0.0"
   },
   "scripts": {
     "install": "node support/fixdeps.js",

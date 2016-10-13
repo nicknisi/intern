@@ -17,8 +17,17 @@ import * as net from 'dojo/node!net';
 // Assumes we're running under an AMD loader
 declare const require: IRequire;
 
+export type ProxyConfig = {
+	basePath?: string;
+	excludeInstrumentation?: boolean|RegExp;
+	instrumenterOptions?: any;
+	port?: number;
+	instrument?: boolean;
+	waitForRunner?: boolean;
+}
+
 export class Proxy {
-	config: any;
+	config: ProxyConfig;
 
 	server: http.Server;
 
@@ -26,7 +35,7 @@ export class Proxy {
 
 	private _sessions: { [id: string]: { lastSequence: number, queue: any, listeners: any[] } };
 
-	constructor(config: any) {
+	constructor(config: ProxyConfig) {
 		this.config = config;
 	}
 
