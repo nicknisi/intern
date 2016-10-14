@@ -1,19 +1,40 @@
 import * as Promise from 'dojo/Promise';
 
-import { Test } from './Test';
-import { InternError, ProxiedSessionCommand } from './interfaces';
+import { Test, TestFunction } from './Test';
+import { InternError, Remote } from '../interfaces';
 import * as util from './util';
 
 // BAIL_REASON needs to be a string so that Intern can tell when a remote has bailed during unit tests so that it
 // can skip functional tests.
 const BAIL_REASON = 'bailed';
 
+export interface SuiteLifecycleFunction {
+	(): void | Promise<any>;
+}
+
+export interface TestLifecycleFunction {
+	(test: Test): void | Promise<any>;
+}
+
+export interface SuiteConfig {
+	after?: SuiteLifecycleFunction;
+	afterEach?: TestLifecycleFunction;
+	before?: SuiteLifecycleFunction;
+	beforeEach?: TestLifecycleFunction;
+	name?: string;
+	parent?: Suite;
+	setup?: SuiteLifecycleFunction;
+	teardown?: SuiteLifecycleFunction;
+	timeout?: number;
+	[name: string]: any;
+}
+
 export class Suite {
 	async: (timeout?: number) => Promise.Deferred<void>;
 
-	afterEach: Function;
+	afterEach: TestLifecycleFunction;
 
-	beforeEach: Function;
+	beforeEach: TestLifecycleFunction;
 
 	error: InternError;
 
@@ -21,11 +42,11 @@ export class Suite {
 
 	parent: Suite;
 
-	setup: Function;
+	setup: SuiteLifecycleFunction;
 
 	skipped: string;
 
-	teardown: Function;
+	teardown: SuiteLifecycleFunction;
 
 	tests: (Suite | Test)[];
 
@@ -41,7 +62,7 @@ export class Suite {
 
 	private _grep: RegExp;
 
-	private _remote: ProxiedSessionCommand;
+	private _remote: Remote;
 
 	private _environmentType: any;
 
@@ -51,12 +72,12 @@ export class Suite {
 
 	private _timeout: number;
 
-	constructor(kwArgs: { [key: string]: string }) {
+	constructor(config: SuiteConfig)  {
 		this.tests = [];
 
 		const anyThis = <any> this;
-		for (let k in kwArgs) {
-			anyThis[k] = kwArgs[k];
+		for (let k in config) {
+			anyThis[k] = config[k];
 		}
 
 		this.reporterManager && this.reporterManager.emit('newSuite', this);
@@ -107,7 +128,7 @@ export class Suite {
 		return (this.parent && this.parent.remote) ? this.parent.remote : this._remote;
 	}
 
-	set remote(value: ProxiedSessionCommand) {
+	set remote(value: Remote) {
 		if (this._remote) {
 			throw new Error('remote may only be set once per suite');
 		}
@@ -247,7 +268,7 @@ export class Suite {
 					return dfd;
 				};
 
-				const suiteFunc: Function = (<any> suite)[name];
+				const suiteFunc: () => Promise<any> = (<any> suite)[name];
 				let returnValue = suiteFunc && suiteFunc.apply(suite, args);
 
 				if (dfd) {

@@ -1,7 +1,17 @@
 import * as Promise from 'dojo/Promise';
 import * as util from './util';
-import { InternError, ProxiedSessionCommand } from './interfaces';
+import { InternError, Remote } from '../interfaces';
 import { Suite } from './Suite';
+
+export interface TestFunction {
+	(test: Test): void | Promise<any>;
+}
+
+export interface TestDescriptor {
+	name: string;
+	parent: Suite;
+	test: TestFunction;
+}
 
 export class Test {
 	name: string;
@@ -30,12 +40,10 @@ export class Test {
 
 	private _usesRemote = false;
 
-	constructor(kwArgs: { [key: string]: string }) {
-		const anyThis = <any> this;
-		for (let k in kwArgs) {
-			anyThis[k] = kwArgs[k];
-		}
-
+	constructor(descriptor: TestDescriptor) {
+		this.name = descriptor.name;
+		this.parent = descriptor.parent;
+		this.test = descriptor.test;
 		this.reporterManager && this.reporterManager.emit('newTest', this);
 	}
 

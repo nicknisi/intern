@@ -1,3 +1,5 @@
+import { CommandLineArguments } from '../interfaces';
+
 export function fromCommandLine(rawArgs: string[]) {
 	return parseArguments(rawArgs || process.argv.slice(2), function (str: string) {
 		return str;
@@ -17,7 +19,7 @@ export function fromQueryString(query: string) {
 }
 
 function parseArguments(rawArgs: string[], decode: (str: string) => any) {
-	let args: { [key: string]: any } = {};
+	let args: CommandLineArguments = {};
 	rawArgs.forEach(function (arg) {
 		const parts = arg.split('=');
 

@@ -98,7 +98,7 @@ export class ProxiedSession extends Session {
 	 * Quits the browser like {@link module:leadfoot/Session#quit}, but retrieves any code coverage data recorded
 	 * by the browser prior to quitting.
 	 */
-	quit(): Promise<void> {
+	quit(): Promise<any> {
 		return this
 			.setHeartbeatInterval(0)
 			.then(() => {

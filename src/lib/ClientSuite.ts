@@ -1,5 +1,5 @@
 import { Suite } from './Suite';
-import { InternError } from './interfaces';
+import { InternError } from '../interfaces';
 
 // AMD modules
 import * as lang from 'dojo/lang';
@@ -11,7 +11,7 @@ import * as ioQuery from 'dojo/io-query';
 import * as urlUtil from 'dojo/node!url';
 import * as pathUtil from 'dojo/node!path';
 
-class ClientSuite extends Suite {
+export class ClientSuite extends Suite {
 	config: any = {};
 
 	name: 'unit tests';
@@ -159,5 +159,3 @@ class ClientSuite extends Suite {
 		return dfd.promise;
 	}
 }
-
-export = ClientSuite;

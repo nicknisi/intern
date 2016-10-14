@@ -1,4 +1,6 @@
 import { IRequire } from 'dojo/loader';
+import { Executor } from './lib/executors/Executor';
+import { CommandLineArguments, Config } from './interfaces';
 
 declare const require: IRequire;
 
@@ -6,17 +8,17 @@ declare const require: IRequire;
  * The arguments Intern was started with, post-processing (e.g.,
  * repeated arguments are converted to arrays).
  */
-export let args: any;
+export let args: CommandLineArguments;
 
 /**
  * The current Intern configuration.
  */
-export let config: any;
+export let config: Config;
 
 /**
  * The executor for the current test run.
  */
-export let executor: any;
+export let executor: Executor;
 
 /**
  * AMD plugin API interface for easy loading of test interfaces.

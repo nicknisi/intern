@@ -1,6 +1,6 @@
 import * as parseArgs from '../parseArgs';
 import * as util from '../util';
-import { Config, Removable } from '../../interfaces';
+import { CommandLineArguments, Config, Removable } from '../../interfaces';
 import { Executor } from './Executor';
 
 // AMD modules
@@ -60,10 +60,10 @@ export class PreExecutor {
 	 * Gets arguments from the command-line/query-string.
 	 */
 	getArguments() {
-		let kwArgs: Config;
+		let kwArgs: CommandLineArguments;
 
 		if (has('host-browser')) {
-			kwArgs = <Config> parseArgs.fromQueryString(location.search);
+			kwArgs = <CommandLineArguments> parseArgs.fromQueryString(location.search);
 		}
 		else if (has('host-node')) {
 			kwArgs = parseArgs.fromCommandLine(process.argv.slice(2));
@@ -76,7 +76,7 @@ export class PreExecutor {
 			}
 		});
 
-		if (kwArgs.excludeInstrumentation === 'true') {
+		if ((<any> kwArgs.excludeInstrumentation) === 'true') {
 			kwArgs.excludeInstrumentation = true;
 		}
 		else if (typeof kwArgs.excludeInstrumentation === 'string') {
@@ -93,7 +93,7 @@ export class PreExecutor {
 	/**
 	 * Gets the user’s configuration.
 	 */
-	getConfig(args: Config) {
+	getConfig(args: CommandLineArguments) {
 		const moduleId = args.config;
 
 		if (!moduleId) {

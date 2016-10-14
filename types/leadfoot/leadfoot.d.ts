@@ -577,8 +577,8 @@ declare module 'leadfoot/Command' {
 		 */
 		constructor(
 			parent: Command<any> | Session,
-			initialiser: (setContext: Command.ContextSetter, value: any) => Promise.Thenable<T> | T,
-			errback: (setContext: Command.ContextSetter, error: Error) => Promise.Thenable<T> | T
+			initialiser?: (setContext: Command.ContextSetter, value: any) => Promise.Thenable<T> | T,
+			errback?: (setContext: Command.ContextSetter, error: Error) => Promise.Thenable<T> | T
 		);
 
 		/**
@@ -2254,7 +2254,7 @@ declare module 'leadfoot/Server' {
 		 * JsonWireProtocol HTTP server is http://localhost:4444/wd/hub. You may also pass a parsed URL object which will
 		 * be converted to a string.
 		 */
-		constructor(url: {} | string);
+		constructor(url: ({}|string), options: { [key: string]: any });
 
 		/**
 		 * An alternative session constructor. Defaults to the standard {@link module:leadfoot/Session} constructor if

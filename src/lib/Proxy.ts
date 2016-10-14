@@ -20,9 +20,9 @@ declare const require: IRequire;
 export type ProxyConfig = {
 	basePath?: string;
 	excludeInstrumentation?: boolean|RegExp;
+	instrument?: boolean;
 	instrumenterOptions?: any;
 	port?: number;
-	instrument?: boolean;
 	waitForRunner?: boolean;
 }
 

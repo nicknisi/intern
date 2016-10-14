@@ -154,10 +154,6 @@ export class Executor {
 			}
 		}
 
-		function loadReporters() {
-			return self._loadReporters(config.reporters);
-		}
-
 		function registerErrorHandler() {
 			self.reporterManager.on('suiteError', function () {
 				self._hasSuiteErrors = true;
@@ -167,8 +163,7 @@ export class Executor {
 			});
 		}
 
-		return Promise.resolve()
-			.then(loadReporters)
+		return this._loadReporters(config.reporters)
 			.then(registerErrorHandler)
 			.then(enableInstrumentation);
 	}
