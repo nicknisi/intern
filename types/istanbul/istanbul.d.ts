@@ -1,15 +1,15 @@
 declare module 'istanbul' {
-    export interface config {
+	export interface config {
 		loadFile: (file: string, overrides: { [key: string]: any }) => Configuration
-    }
+	}
 
-    export interface ContentWriter {
-    }
+	export interface ContentWriter {
+	}
 
-    export interface FileWriter {
-    }
+	export interface FileWriter {
+	}
 
-    export interface Hook {
+	export interface Hook {
 		hookRequire: (matcher: Function, transformer: Function, options?: any) => void;
 		unhookRequire: () => void;
 		hookCreateScript: (matcher: Function, transformer: Function, options?: any) => void;
@@ -17,19 +17,19 @@ declare module 'istanbul' {
 		hookRunInThisContext: (matcher: Function, transformer: Function, options?: any) => void;
 		unhookRunInThisContext: () => void;
 		unloadRequireCache: (matcher: Function) => void;
-    }
+	}
 
-    export interface Report {
-    }
+	export interface Report {
+	}
 
-    export interface Store {
-    }
+	export interface Store {
+	}
 
-    export interface ObjectUtils {
-    }
+	export interface ObjectUtils {
+	}
 
-    export interface Writer {
-    }
+	export interface Writer {
+	}
 
 	export interface Watermarks {
 		statements: number[];
@@ -38,25 +38,25 @@ declare module 'istanbul' {
 		branches: number[];
 	}
 
-    export class Collector {
+	export class Collector {
 		constructor(options?: any);
-        add(coverage: any, testName?: string): void;
-    }
+		add(coverage: any, testName?: string): void;
+	}
 
 	export class Configuration {
 	}
 
-    export class Instrumenter {
-        constructor(options?: any);
-        instrumentSync(code: string, filename: string): string;
-    }
+	export class Instrumenter {
+		constructor(options?: any);
+		instrumentSync(code: string, filename: string): string;
+	}
 
-    export class Reporter {
-        constructor(cfg?: Configuration, dir?: string);
-        add(fmt: string): void;
-        addAll(fmts: Array<string>): void;
-        write(collector: Collector, sync: boolean, callback: Function): void;
-    }
+	export class Reporter {
+		constructor(cfg?: Configuration, dir?: string);
+		add(fmt: string): void;
+		addAll(fmts: Array<string>): void;
+		write(collector: Collector, sync: boolean, callback: Function): void;
+	}
 
 	export const hook: Hook;
 
@@ -67,9 +67,20 @@ declare module 'istanbul' {
 	export const VERSION: string;
 }
 
-declare module 'instanbul/lib/report/common/defaults' {
+declare module 'istanbul/lib/report/common/defaults' {
 	export const watermarks: () => { statements: number[], lines: number[], functions: number[], branches: number[] };
 	export const classFor: (type: string, metrics: { [key: string]: any }, watermarks: { [key: string]: any }) => string;
 	export const colorize: (str: string, clazz: string) => string;
 	export const defaultReporterConfig: () => { [key: string]: string };
+}
+
+declare module 'istanbul/lib/report/cobertura' {
+	import { Reporter, Configuration, Collector } from 'istanbul';
+	export class CoberturaReporter extends Reporter {
+		projectRoot: string;
+		dir?: string;
+		file?: string;
+		opts?: Configuration;
+		writeReport(collector: Collector, sync?: boolean): void;
+	}
 }
