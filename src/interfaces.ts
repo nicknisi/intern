@@ -7,14 +7,14 @@ import { Test } from './lib/Test';
 import Command = require('leadfoot/Command');
 
 export interface Config {
-	bail?: boolean,
-	basePath?: string,
+	bail?: boolean;
+	basePath?: string;
 	capabilities?: {
 		name?: string,
 		build?: string,
 		[key: string]: any
 	};
-	config?: string,
+	config?: string;
 	coverageVariable?: string;
 	defaultTimeout?: number;
 	environments?: { [key: string]: any }[];
@@ -38,8 +38,8 @@ export interface Config {
 	reporters?: (string|ReporterDescriptor)[];
 	runnerClientReporter?: {
 		waitForRunner?: boolean
-	},
-	rootSuiteName?: string,
+	};
+	rootSuiteName?: string;
 	sessionId?: string;
 	setup?: (executor: Executor) => Promise<any>;
 	suites?: string[];
