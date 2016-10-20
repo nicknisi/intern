@@ -1,6 +1,6 @@
 import { resolve } from 'path';
 import { Collector } from 'istanbul';
-import { CoberturaReporter } from 'istanbul/lib/report/cobertura';
+import { CoberturaReport } from 'istanbul/lib/report/cobertura';
 import { ReporterConfig } from '../ReporterManager';
 
 export interface CoberturaReporterConfig extends ReporterConfig {
@@ -9,11 +9,11 @@ export interface CoberturaReporterConfig extends ReporterConfig {
 
 export class Cobertura {
 	private _collector: Collector;
-	private _reporter: CoberturaReporter;
+	private _reporter: CoberturaReport;
 
 	constructor(config: CoberturaReporterConfig = {}) {
 		this._collector = new Collector();
-		this._reporter = new CoberturaReporter({
+		this._reporter = new CoberturaReport({
 			file: config.filename,
 			watermarks: config.watermarks
 		});

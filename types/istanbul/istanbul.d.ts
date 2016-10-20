@@ -1,6 +1,6 @@
 declare module 'istanbul' {
 	export interface config {
-		loadFile: (file: string, overrides: { [key: string]: any }) => Configuration
+		loadFile: (file: string, overrides: { [key: string]: any }) => Configuration;
 	}
 
 	export interface ContentWriter {
@@ -67,6 +67,20 @@ declare module 'istanbul' {
 	export const VERSION: string;
 }
 
+declare module 'istanbul/lib/report' {
+	import { EventEmitter } from 'events';
+	import { Collector, Configuration } from 'istanbul';
+	export class Report extends EventEmitter {
+		static mix(cons: Object, proto: Object): void;
+		static register(ctor: Function): void;
+		static create(t: string, opts: Object): void;
+		static loadAll(dir: string): void;
+		synopsis(): void;
+		getDefaultConfig(): Configuration;
+		writeReport(collector: Collector, sync?: boolean): void;
+	}
+}
+
 declare module 'istanbul/lib/report/common/defaults' {
 	export const watermarks: () => { statements: number[], lines: number[], functions: number[], branches: number[] };
 	export const classFor: (type: string, metrics: { [key: string]: any }, watermarks: { [key: string]: any }) => string;
@@ -75,12 +89,27 @@ declare module 'istanbul/lib/report/common/defaults' {
 }
 
 declare module 'istanbul/lib/report/cobertura' {
-	import { Reporter, Configuration, Collector } from 'istanbul';
-	export class CoberturaReporter extends Reporter {
+	import { Report } from 'istanbul/lib/report';
+	import { Configuration, Collector } from 'istanbul';
+	export class CoberturaReport extends Report {
+		new (opts: Configuration): CoberturaReport;
 		projectRoot: string;
 		dir?: string;
 		file?: string;
 		opts?: Configuration;
 		writeReport(collector: Collector, sync?: boolean): void;
+	}
+}
+
+declare module 'istanbul/lib/report/text' {
+	// static TYPE: string;
+	import { Report } from 'istanbul/lib/report';
+	import { Watermarks } from 'istanbul';
+	export class TextReport extends Report {
+		dir: string;
+		opts?: string;
+		summary: any;
+		maxCols: number;
+		watermarks: Watermarks;
 	}
 }
